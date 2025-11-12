@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Feria Gastronómica • Evaluación (1 jurado)</title>
+  <style>
+    :root{
+      --bg:#0f1226; --muted:#9aa6bf; --text:#f5f7ff;
+      --a1:#6ee7ff; --a2:#a78bfa; --a3:#34d399; --ok:#22c55e;
+      --radius:16px; --shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial; color:var(--text);
+      background: radial-gradient(1200px 700px at 15% 10%, rgba(111,231,255,.12), transparent),
+                 radial-gradient(900px 600px at 90% 0%, rgba(167,139,250,.10), transparent),
+                 radial-gradient(1000px 700px at 50% 100%, rgba(52,211,153,.10), transparent), #0f1226;
+      min-height:100vh}
+    header{padding:20px 16px; text-align:center}
+    h1{margin:0; font-size:clamp(22px,3.2vw,34px)}
+    header p{margin:8px auto 0; max-width:900px; color:var(--muted)}
+
+    .container{display:grid; gap:16px; padding:16px; max-width:1200px; margin:0 auto; grid-template-columns:1.2fr .8fr}
+    @media (max-width:980px){.container{grid-template-columns:1fr}}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.00)); border:1px solid rgba(255,255,255,.10); border-radius:var(--radius); box-shadow:var(--shadow)}
+    .card .head{padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.08); display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .card .head h2{margin:0; font-size:18px}
+    .card .body{padding:14px 16px}
+
+    .pill-group{display:flex; gap:8px; padding:6px; background:#0b0f24; border:1px solid rgba(255,255,255,.12); border-radius:12px}
+    .pill{flex:1; text-align:center; padding:10px 8px; border-radius:10px; cursor:pointer; user-select:none; border:1px solid rgba(255,255,255,.10); font-weight:700}
+    .pill[aria-pressed="true"]{background:linear-gradient(90deg, rgba(110,231,255,.18), rgba(167,139,250,.18)); border-color:rgba(110,231,255,.45)}
+
+    table{width:100%; border-collapse:collapse}
+    th, td{padding:8px 8px; border-bottom:1px solid rgba(255,255,255,.08); text-align:left; font-size:14px}
+    th{color:#cfd6ff}
+    tr:hover td{background:rgba(255,255,255,.02)}
+
+    input[type=number], input.jurado-name{width:100%; max-width:170px; padding:8px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:#0f132c; color:var(--text)}
+
+    .actions{display:flex; flex-wrap:wrap; gap:8px}
+    .btn{border-radius:10px; padding:10px 12px; font-weight:800; letter-spacing:.2px; cursor:pointer; border:1px solid rgba(255,255,255,.14); background:#0e1531}
+    .btn.primary{background:linear-gradient(90deg, var(--a3), var(--a2)); color:#07101f; border:none}
+    .muted{color:var(--muted)}
+
+    .leader{display:grid; gap:10px}
+    .leader .slot{display:grid; grid-template-columns:42px 1fr auto; align-items:center; gap:10px; padding:8px; border:1px solid rgba(255,255,255,.10); border-radius:12px; background:#0b0f24}
+    .medal{width:34px; height:34px; border-radius:17px; display:grid; place-items:center; font-weight:900; font-size:13px}
+    .g{background:linear-gradient(180deg, #ffd54d, #d4a300); color:#1a1300}
+    .s{background:linear-gradient(180deg, #e5e7eb, #aeb4bf); color:#171a20}
+    .b{background:linear-gradient(180deg, #f4c38b, #a96b2e); color:#1a0e06}
+  </style>
+  <!-- SheetJS para exportar a Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Feria Gastronómica — Evaluación (1 jurado)</h1>
+    <p>Escribe la nota (1.0–5.0) por criterio y país. El podio se actualiza en tiempo real.</p>
+  </header>
+
+  <main class="container">
+    <section class="card" aria-labelledby="sec-eval">
+      <div class="head">
+        <h2 id="sec-eval">Evaluación</h2>
+        <div class="actions">
+          <button class="btn" id="btnExportar">Exportar CSV</button>
+          <button class="btn" id="btnExportarXLSX">Exportar a Excel (.xlsx)</button>
+          <button class="btn" id="btnReset">Reiniciar</button>
+        </div>
+      </div>
+      <div class="body">
+        <div class="pill-group" role="group" aria-label="Jurado">
+          <div class="pill" id="pillJ1" data-jurado="1" aria-pressed="true"><span class="pill-label">J1</span></div>
+        </div>
+        <div style="display:grid; gap:8px; grid-template-columns:repeat(1, 1fr); margin:10px 0 4px">
+          <input id="jn1" class="jurado-name" placeholder="Nombre del jurado" />
+        </div>
+        <p id="msg" class="muted" style="margin:8px 0 12px"></p>
+        <div style="overflow:auto">
+          <table id="tabla-inputs">
+            <thead>
+              <tr>
+                <th>País</th>
+                <th>Ambientación</th>
+                <th>Presentación Verbal</th>
+                <th>Degustación</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <aside class="card" aria-labelledby="sec-podio">
+      <div class="head"><h2 id="sec-podio">Podio</h2></div>
+      <div class="body">
+        <div class="leader" id="leader"></div>
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,.1); margin:12px 0">
+        <small class="muted">El total se calcula como suma de promedios por criterio (escala 0–15).</small>
+      </div>
+    </aside>
+
+    <section class="card" style="grid-column:1/-1" aria-labelledby="sec-res">
+      <div class="head"><h2 id="sec-res">Resultados</h2></div>
+      <div class="body">
+        <div style="overflow:auto">
+          <table id="tabla-results">
+            <thead>
+              <tr>
+                <th data-sort="pais">País</th>
+                <th data-sort="Ambientación">Ambientación (avg)</th>
+                <th data-sort="Presentación Verbal">Presentación Verbal (avg)</th>
+                <th data-sort="Degustación Plato">Degustación (avg)</th>
+                <th data-sort="total">Total /15</th>
+                <th>Completado (1 jur.)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ===== Utilidades =====
+    const byId = id => document.getElementById(id);
+
+    // ===== Config =====
+    const PAISES = [
+      "Brasil","Holanda","Cuba","Perú","Argentina","España","Ecuador","Alemania","Bélgica","Grecia","México (Día de Muertos)","México (Carnaval de Veracruz)","Estados Unidos (Ing. Sistemas)","Estados Unidos (Arq/Ed. Física)","Italia","Francia"
+    ];
+    const CRITERIOS = [
+      "Ambientación (decoración del stand – vestuario – Otro (extras))",
+      "Presentación Verbal",
+      "Degustación Plato"
+    ];
+    const CRITERIO_ALIAS = {
+      [CRITERIOS[0]]:"Ambientación",
+      [CRITERIOS[1]]:"Presentación Verbal",
+      [CRITERIOS[2]]:"Degustación"
+    };
+
+    // Persistencia
+    let ratings = JSON.parse(localStorage.getItem('fg_ratings_v2')||'{}'); // {pais:{jurado:{criterio:number}}}
+    const DEFAULT_JURADOS = ["J1"];
+    let juradoNames = JSON.parse(localStorage.getItem('fg_jurado_names')||'null') || DEFAULT_JURADOS.slice();
+    const save = ()=>{ localStorage.setItem('fg_ratings_v2', JSON.stringify(ratings)); localStorage.setItem('fg_jurado_names', JSON.stringify(juradoNames)); };
+
+    function ensureCountry(p){ if(!ratings[p]) ratings[p] = {}; }
+    function juradoCompletedCountry(p){ ensureCountry(p); let d=0; for(const j in ratings[p]){ const v=ratings[p][j]||{}; if(CRITERIOS.every(k=> typeof v[k]==='number')) d++; } return d; }
+
+    // Jurado actual (auto-seleccionado)
+    let juradoSel = '1';
+
+    // ===== Render inputs =====
+    function renderInputs(){
+      const tb = byId('tabla-inputs').querySelector('tbody');
+      tb.innerHTML='';
+      // Nombre del jurado y etiqueta
+      const el = byId('jn1'); if(el){ el.value = juradoNames[0] || 'J1'; }
+      const pill = byId('pillJ1'); if(pill){ pill.setAttribute('aria-pressed','true'); pill.querySelector('.pill-label').textContent = juradoNames[0] || 'J1'; }
+
+      // Tabla
+      PAISES.forEach(pais=>{
+        const tr = document.createElement('tr');
+        const tdPais = document.createElement('td'); tdPais.textContent=pais; tr.appendChild(tdPais);
+        CRITERIOS.forEach(crit=>{
+          const td = document.createElement('td');
+          const input = document.createElement('input'); input.type='number'; input.min='1'; input.max='5'; input.step='0.1'; input.placeholder='1.0–5.0';
+          const cur = ratings[pais]?.[juradoSel]?.[crit];
+          if(typeof cur==='number') input.value=cur.toFixed(1);
+          input.addEventListener('change', ()=>{
+            const v = parseFloat(String(input.value).replace(',','.'));
+            if(!(v>=1 && v<=5)) { input.value=''; return; }
+            ensureCountry(pais);
+            if(!ratings[pais][juradoSel]) ratings[pais][juradoSel] = {};
+            ratings[pais][juradoSel][crit] = Math.round(v*10)/10;
+            save();
+            byId('msg').textContent = `Guardado: ${pais} • ${juradoNames[0]||'J1'} • ${CRITERIO_ALIAS[crit]} = ${ratings[pais][juradoSel][crit].toFixed(1)}`;
+            refreshResults();
+          });
+          td.appendChild(input); tr.appendChild(td);
+        });
+        tb.appendChild(tr);
+      });
+    }
+
+    // ===== Leaderboard y resultados =====
+    function summarizeCountry(p){
+      ensureCountry(p);
+      let sumA=0,sumB=0,sumD=0, nA=0,nB=0,nD=0;
+      for(const j in ratings[p]){
+        const r=ratings[p][j];
+        if(typeof r[CRITERIOS[0]]==='number'){sumA+=r[CRITERIOS[0]]; nA++;}
+        if(typeof r[CRITERIOS[1]]==='number'){sumB+=r[CRITERIOS[1]]; nB++;}
+        if(typeof r[CRITERIOS[2]]==='number'){sumD+=r[CRITERIOS[2]]; nD++;}
+      }
+      const avgA=nA?sumA/nA:0, avgB=nB?sumB/nB:0, avgD=nD?sumD/nD:0;
+      return {pais:p, avgA, avgB, avgD, total:avgA+avgB+avgD, done: juradoCompletedCountry(p)};
+    }
+    function getCountrySummaries(){ return PAISES.map(summarizeCountry).sort((a,b)=> b.total - a.total); }
+
+    function renderLeaderboard(){
+      const lb=byId('leader'); lb.innerHTML='';
+      const top=getCountrySummaries().slice(0,3);
+      const medals=['g','s','b'];
+      top.forEach((s,i)=>{
+        const row=document.createElement('div'); row.className='slot';
+        const med=document.createElement('div'); med.className='medal '+medals[i]; med.textContent=(i+1)+'°';
+        const name=document.createElement('div'); name.innerHTML = `<strong>${s.pais}</strong><br><span class="muted" style="font-size:12px">${s.total.toFixed(2)} / 15</span>`;
+        const done=document.createElement('div'); done.className='muted'; done.textContent=`${s.done}/1`;
+        row.append(med,name,done); lb.appendChild(row);
+      });
+      if(top.length===0){ lb.innerHTML='<div class="muted">Aún sin datos</div>'; }
+    }
+
+    function renderResultsTable(sortKey='total', asc=false){
+      const tb=byId('tabla-results').querySelector('tbody');
+      const data=getCountrySummaries().sort((a,b)=>{
+        if(sortKey==='pais') return asc? a.pais.localeCompare(b.pais) : b.pais.localeCompare(a.pais);
+        const av= sortKey==='Ambientación'?a.avgA: sortKey==='Presentación Verbal'?a.avgB: sortKey==='Degustación Plato'?a.avgD: a.total;
+        const bv= sortKey==='Ambientación'?b.avgA: sortKey==='Presentación Verbal'?b.avgB: sortKey==='Degustación Plato'?b.avgD: b.total;
+        return asc? av-bv : bv-av;
+      });
+      tb.innerHTML='';
+      data.forEach(s=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${s.pais}</td><td>${s.avgA.toFixed(2)}</td><td>${s.avgB.toFixed(2)}</td><td>${s.avgD.toFixed(2)}</td><td><strong>${s.total.toFixed(2)}</strong></td><td>${s.done===1?'Sí':'No'}</td>`;
+        tb.appendChild(tr);
+      });
+    }
+
+    let currentSort={key:'total', asc:false};
+    document.querySelectorAll('#tabla-results thead th[data-sort]').forEach(th=> th.addEventListener('click', ()=>{
+      const k=th.getAttribute('data-sort');
+      if(currentSort.key===k){ currentSort.asc=!currentSort.asc; } else { currentSort={key:k, asc:false}; }
+      renderResultsTable(currentSort.key, currentSort.asc);
+    }));
+
+    function refreshResults(){ renderLeaderboard(); renderResultsTable(currentSort.key, currentSort.asc); }
+
+    // ===== CSV =====
+    function generateCSVString(){
+      const rows = [];
+      rows.push(['País','Jurado','Ambientación','Presentación Verbal','Degustación Plato','Total (jurado)']);
+      for(const pais of PAISES){
+        if(!ratings[pais]) continue;
+        for(const j in ratings[pais]){
+          const r=ratings[pais][j];
+          const a=r[CRITERIOS[0]]??''; const b=r[CRITERIOS[1]]??''; const d=r[CRITERIOS[2]]??'';
+          const tot=(typeof a==='number' && typeof b==='number' && typeof d==='number')?(a+b+d):'';
+          const nombre = juradoNames[Math.max(0, parseInt(j,10)-1)] || `J${j}`;
+          rows.push([pais, nombre, a, b, d, tot===''? '': Number(tot).toFixed(1)]);
+        }
+      }
+      rows.push([]);
+      rows.push(['País','Prom. Ambientación','Prom. Presentación','Prom. Degustación','Total /15','Completado']);
+      getCountrySummaries().forEach(s=> rows.push([s.pais, s.avgA.toFixed(2), s.avgB.toFixed(2), s.avgD.toFixed(2), s.total.toFixed(2), `${s.done}/1`]));
+      return rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+    }
+
+    byId('btnExportar').addEventListener('click', ()=>{
+      const csv = generateCSVString();
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='resultados_feria_gastronomica.csv'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    // ===== Excel (xlsx) limpio =====
+    byId('btnExportarXLSX').addEventListener('click', ()=>{
+      const wb = XLSX.utils.book_new();
+
+      // -------- Hoja Detalle (solo países con datos) --------
+      const detalleAOA = [['País','Jurado','Ambientación','Presentación Verbal','Degustación Plato','Total (jurado)']];
+      for(const pais of PAISES){
+        if(!ratings[pais]) continue;
+        const r = ratings[pais]['1'];
+        if(!r) continue;
+        const a=r[CRITERIOS[0]], b=r[CRITERIOS[1]], d=r[CRITERIOS[2]];
+        if([a,b,d].every(x=> typeof x==='number')){
+          const tot = a+b+d;
+          const nombre = juradoNames[0] || 'J1';
+          detalleAOA.push([pais, nombre, a, b, d, tot]);
+        }
+      }
+      const wsDetalle = XLSX.utils.aoa_to_sheet(detalleAOA);
+      if(wsDetalle['!ref']){
+        const rangoDet = XLSX.utils.decode_range(wsDetalle['!ref']);
+        for(let R=1; R<=rangoDet.e.r; R++){
+          for(let C=2; C<=5; C++){
+            const addr = XLSX.utils.encode_cell({c:C, r:R});
+            const cell = wsDetalle[addr];
+            if(cell && typeof cell.v === 'number'){ cell.t='n'; cell.z='0.0'; }
+          }
+        }
+        wsDetalle['!autofilter'] = { ref: wsDetalle['!ref'] };
+        const colMaxDet = new Array(detalleAOA[0].length).fill(0);
+        detalleAOA.forEach(row=> row.forEach((v,i)=>{ colMaxDet[i] = Math.max(colMaxDet[i], String(v).length); }));
+        wsDetalle['!cols'] = colMaxDet.map(n=>({ wch: Math.min(Math.max(n+2, 12), 40) }));
+      }
+      XLSX.utils.book_append_sheet(wb, wsDetalle, 'Detalle');
+
+      // -------- Hoja Resumen --------
+      const resumenAOA = [['País','Prom. Ambientación','Prom. Presentación','Prom. Degustación','Total /15','Completado']];
+      getCountrySummaries().forEach(s=> resumenAOA.push([s.pais, s.avgA, s.avgB, s.avgD, s.total, `${s.done}/1`]));
+      const wsResumen = XLSX.utils.aoa_to_sheet(resumenAOA);
+      if(wsResumen['!ref']){
+        const rangoRes = XLSX.utils.decode_range(wsResumen['!ref']);
+        for(let R=1; R<=rangoRes.e.r; R++){
+          for(let C=1; C<=4; C++){
+            const addr = XLSX.utils.encode_cell({c:C, r:R});
+            const cell = wsResumen[addr];
+            if(cell && typeof cell.v === 'number'){ cell.t='n'; cell.z='0.00'; }
+          }
+          const addrTot = XLSX.utils.encode_cell({c:4, r:R});
+          const cellTot = wsResumen[addrTot];
+          if(cellTot && typeof cellTot.v === 'number'){ cellTot.t='n'; cellTot.z='0.00'; }
+        }
+        wsResumen['!autofilter'] = { ref: wsResumen['!ref'] };
+        const colMaxRes = new Array(resumenAOA[0].length).fill(0);
+        resumenAOA.forEach(row=> row.forEach((v,i)=>{ colMaxRes[i] = Math.max(colMaxRes[i], String(v).length); }));
+        wsResumen['!cols'] = colMaxRes.map(n=>({ wch: Math.min(Math.max(n+2, 12), 40) }));
+      }
+      XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+
+      XLSX.writeFile(wb, 'resultados_feria_gastronomica.xlsx');
+    });
+
+    byId('btnReset').addEventListener('click', ()=>{
+      if(!confirm('¿Borrar todas las calificaciones?')) return;
+      ratings={}; save(); renderInputs(); refreshResults(); byId('msg').textContent='Sistema reiniciado.';
+    });
+
+    // ===== Edición de nombre del jurado =====
+    byId('jn1').addEventListener('change', ()=>{
+      const v = byId('jn1').value.trim();
+      juradoNames[0] = v || 'J1';
+      save();
+      renderInputs();
+    });
+
+    // ===== Self-tests =====
+    ;(function runSelfTests(){
+      try{
+        const backup = JSON.stringify(ratings);
+        const namesBackup = JSON.stringify(juradoNames);
+        const lsBackupR = localStorage.getItem('fg_ratings_v2');
+        const lsBackupN = localStorage.getItem('fg_jurado_names');
+
+        // Nombres de jurado personalizados
+        juradoNames = ['Ana']; save();
+
+        const sample = {
+          'Brasil': { '1': { [CRITERIOS[0]]:5.0, [CRITERIOS[1]]:4.5, [CRITERIOS[2]]:3.0 } },
+          'Francia': { '1': { [CRITERIOS[0]]:2.0, [CRITERIOS[1]]:2.0, [CRITERIOS[2]]:2.0 } }
+        };
+        ratings = JSON.parse(JSON.stringify(sample)); save();
+
+        // CSV básico incluye nombres personalizados
+        const csv = generateCSVString();
+        console.assert(csv.split('\n')[1].includes('Ana') || csv.split('\n')[2].includes('Ana'), 'CSV debe mostrar nombre de jurado');
+        console.assert(!/undefined/.test(csv), 'CSV sin undefined');
+        console.assert(csv.includes('\n'), 'CSV usa \n como separador');
+
+        const list = getCountrySummaries();
+        console.assert(list[0].total >= list[list.length-1].total, 'Orden descendente');
+        const br = list.find(x=>x.pais==='Brasil');
+        console.assert(Math.abs(br.total - 12.5) < 1e-9, 'Total Brasil 12.5');
+
+        // Restaurar
+        ratings = JSON.parse(backup||'{}');
+        juradoNames = JSON.parse(namesBackup||'[]');
+        if(lsBackupR===null) localStorage.removeItem('fg_ratings_v2'); else localStorage.setItem('fg_ratings_v2', lsBackupR);
+        if(lsBackupN===null) localStorage.removeItem('fg_jurado_names'); else localStorage.setItem('fg_jurado_names', lsBackupN);
+      }catch(e){ console.warn('Self-tests error:', e); }
+    })();
+
+    // Init
+    renderInputs();
+    refreshResults();
+  </script>
+</body>
+</html>
